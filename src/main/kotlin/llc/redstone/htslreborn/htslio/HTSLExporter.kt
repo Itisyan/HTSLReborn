@@ -84,6 +84,15 @@ object HTSLExporter {
         }
     }
 
+    private fun quoteStatValueIfNeeded(value: String): String {
+        val dynamicPlaceholderMatch = Regex("""(%[\w./ ]+%)D?""", RegexOption.IGNORE_CASE).matchEntire(value)
+        if (dynamicPlaceholderMatch != null) {
+            return dynamicPlaceholderMatch.groupValues[1]
+        }
+
+        return quoteIfNeeded(value)
+    }
+
     fun exportFile(path: Path, onComplete: (Boolean) -> Unit = {}) {
         SystemsAPI.launch {
             exportingFile = path
@@ -177,7 +186,7 @@ object HTSLExporter {
             StatValue::class -> {
                 when (value) {
                     is StatValue.Str -> properties.add("\"${value.value.replace("\"", "\\\"")}\"")
-                    is StatValue.UnquotedStr -> properties.add(quoteIfNeeded(value.value))
+                    is StatValue.UnquotedStr -> properties.add(quoteStatValueIfNeeded(value.value))
                     else -> properties.add(value.toString())
                 }
             }

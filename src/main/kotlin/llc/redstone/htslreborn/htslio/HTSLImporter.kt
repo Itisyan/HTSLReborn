@@ -10,6 +10,7 @@ import llc.redstone.htslreborn.parser.PreProcess
 import llc.redstone.htslreborn.tokenizer.Tokenizer
 import llc.redstone.htslreborn.htslio.ActionMenuRecovery.isActionMenuTimeout
 import llc.redstone.htslreborn.htslio.ActionMenuRecovery.isActionSettingsTimeout
+import llc.redstone.htslreborn.htslio.ActionMenuRecovery.isSelectOptionTimeout
 import llc.redstone.htslreborn.htslio.ActionMenuRecovery.isSettingsTimeout
 import llc.redstone.htslreborn.utils.UIErrorToast
 import llc.redstone.htslreborn.utils.UISuccessToast
@@ -20,6 +21,8 @@ import llc.redstone.systemsapi.api.Function as HousingFunction
 import llc.redstone.systemsapi.api.Menu as HousingMenu
 import llc.redstone.systemsdata.Action
 import llc.redstone.systemsdata.Condition
+import llc.redstone.systemsdata.Keyed
+import llc.redstone.systemsdata.KeyedLabeled
 import llc.redstone.systemsdata.Pagination
 import llc.redstone.systemsapi.importer.ActionContainer
 import llc.redstone.systemsapi.util.CommandUtils
@@ -232,13 +235,20 @@ object HTSLImporter {
         for (action in actions) {
             try {
                 MenuUtils.onOpen(actionContainer.title)
-                actionContainer.addActions(listOf(action))
+                if (HTSLActionImporter.needsLocalImport(action)) {
+                    HTSLActionImporter.addAction(actionContainer, action)
+                } else {
+                    actionContainer.addActions(listOf(action))
+                }
             } catch (e: Exception) {
                 if (!e.isActionMenuTimeout(actionContainer.title)) {
                     if (e.isActionSettingsTimeout() && recoverFromSettingsTimeout(actionContainer.title, action, "Action Settings")) {
                         continue
                     }
                     if (e.isSettingsTimeout() && recoverFromSettingsTimeout(actionContainer.title, action, "Settings")) {
+                        continue
+                    }
+                    if (e.isSelectOptionTimeout() && recoverFromSettingsTimeout(actionContainer.title, action, "Select Option")) {
                         continue
                     }
                     throw e
@@ -265,12 +275,12 @@ object HTSLImporter {
     private suspend fun recoverFromSettingsTimeout(actionContainerTitle: String, action: Action, menuName: String): Boolean {
         HTSLReborn.LOGGER.warn("Import hit a transient $menuName timeout while configuring ${action::class.simpleName}; recovering and continuing.")
 
-        completePaginatedSelectionIfStillOpen(paginatedSelections(action))
+        completeSelectionIfStillOpen(selectableSelections(action))
 
         return ActionMenuRecovery.recover(actionContainerTitle)
     }
 
-    private suspend fun completePaginatedSelectionIfStillOpen(selections: List<String>) {
+    private suspend fun completeSelectionIfStillOpen(selections: List<String>) {
         val currentTitle = MC.currentScreen?.title?.string ?: return
         if (!currentTitle.contains("Select Option")) return
 
@@ -291,16 +301,18 @@ object HTSLImporter {
             MenuUtils.clickItems(selection, paginated = visibleSelection == null)
             SystemsAPI.scaledDelay(4.0)
         }.onFailure {
-            HTSLReborn.LOGGER.warn("Could not finish selecting paginated option '$selection' during import recovery.")
+            HTSLReborn.LOGGER.warn("Could not finish selecting option '$selection' during import recovery.")
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun paginatedSelections(value: Any?): List<String> {
+    private fun selectableSelections(value: Any?): List<String> {
         val selections = mutableListOf<String>()
 
         fun collect(current: Any?) {
             when (current) {
+                is KeyedLabeled -> selections.add(current.label)
+                is Keyed -> selections.add(current.key)
                 is Action, is Condition -> {
                     for (property in current::class.memberProperties) {
                         val propertyValue = (property as KProperty1<Any, *>).get(current)
@@ -310,6 +322,8 @@ object HTSLImporter {
 
                         if (propertyValue is Iterable<*>) {
                             propertyValue.forEach(::collect)
+                        } else {
+                            collect(propertyValue)
                         }
                     }
                 }

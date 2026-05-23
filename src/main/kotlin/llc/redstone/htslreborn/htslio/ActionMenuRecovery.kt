@@ -37,6 +37,10 @@ internal object ActionMenuRecovery {
         return isMenuTimeout("Settings")
     }
 
+    fun Throwable.isSelectOptionTimeout(): Boolean {
+        return isMenuTimeout("Select Option")
+    }
+
     fun Throwable.isRecoverableActionMenuFailure(title: String): Boolean {
         return isTransientMenuClose() || isActionMenuTimeout(title)
     }

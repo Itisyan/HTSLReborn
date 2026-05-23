@@ -72,6 +72,56 @@ class ParserTest {
     }
 
     @Test
+    fun testQuotedDynamicVariableValuesImportAsDynamic() {
+        val input = """
+            var "temp2" *= "%var.player/temp2 0.0%" false
+            globalvar "ray/look/x" = "%var.player/temp2 0.0%D" false
+        """.trimIndent()
+
+        val tokens = Tokenizer.tokenize(input)
+        val preProcessedTokens = PreProcess.preProcess(tokens)
+        val actions = Parser.parse(preProcessedTokens, Path("test.htsl")).toMap()["base"] ?: emptyList()
+
+        assertEquals(
+            listOf(
+                Action.PlayerVariable("temp2", StatOp.Mul, StatValue.UnquotedStr("%var.player/temp2 0.0%"), false),
+                Action.GlobalVariable("ray/look/x", StatOp.Set, StatValue.UnquotedStr("%var.player/temp2 0.0%"), false),
+            ),
+            actions
+        )
+    }
+
+    @Test
+    fun testVariableValueTypeSyntaxImport() {
+        val input = """
+            var whole = 500
+            var decimal = 500.5
+            var forcedLong = 500L
+            var forcedDouble = 500D
+            var quotedNumber = "500"
+            var quotedText = "hello"
+            var bareText = hello
+        """.trimIndent()
+
+        val tokens = Tokenizer.tokenize(input)
+        val preProcessedTokens = PreProcess.preProcess(tokens)
+        val actions = Parser.parse(preProcessedTokens, Path("test.htsl")).toMap()["base"] ?: emptyList()
+
+        assertEquals(
+            listOf(
+                Action.PlayerVariable("whole", StatOp.Set, StatValue.I32(500)),
+                Action.PlayerVariable("decimal", StatOp.Set, StatValue.Dbl(500.5)),
+                Action.PlayerVariable("forcedLong", StatOp.Set, StatValue.Lng(500)),
+                Action.PlayerVariable("forcedDouble", StatOp.Set, StatValue.Dbl(500.0)),
+                Action.PlayerVariable("quotedNumber", StatOp.Set, StatValue.Str("500")),
+                Action.PlayerVariable("quotedText", StatOp.Set, StatValue.Str("hello")),
+                Action.PlayerVariable("bareText", StatOp.Set, StatValue.UnquotedStr("hello")),
+            ),
+            actions
+        )
+    }
+
+    @Test
     fun testVariableConditionAliasesImport() {
         val input = """
             if (var Kills == 1, stat Kills == 1, globalvar Total >= 2, globalstat Total >= 2) {
@@ -91,6 +141,31 @@ class ParserTest {
                 Condition.PlayerVariableRequirement("Kills", Comparison.Eq, StatValue.I32(1)),
                 Condition.GlobalVariableRequirement("Total", Comparison.Ge, StatValue.I32(2)),
                 Condition.GlobalVariableRequirement("Total", Comparison.Ge, StatValue.I32(2)),
+            ),
+            conditional.conditions
+        )
+    }
+
+    @Test
+    fun testVariableConditionValueTypeSyntaxImport() {
+        val input = """
+            if (var quotedNumber == "500", var quotedText == "hello", var legacyDynamic == "%var.player/temp2 0.0%D", var percentText == "hello%world") {
+                chat ok
+            }
+        """.trimIndent()
+
+        val tokens = Tokenizer.tokenize(input)
+        val preProcessedTokens = PreProcess.preProcess(tokens)
+        val actions = Parser.parse(preProcessedTokens, Path("test.htsl")).toMap()["base"] ?: emptyList()
+
+        val conditional = actions.single() as Action.Conditional
+
+        assertEquals(
+            listOf(
+                Condition.PlayerVariableRequirement("quotedNumber", Comparison.Eq, StatValue.Str("500")),
+                Condition.PlayerVariableRequirement("quotedText", Comparison.Eq, StatValue.Str("hello")),
+                Condition.PlayerVariableRequirement("legacyDynamic", Comparison.Eq, StatValue.UnquotedStr("%var.player/temp2 0.0%")),
+                Condition.PlayerVariableRequirement("percentText", Comparison.Eq, StatValue.Str("hello%world")),
             ),
             conditional.conditions
         )

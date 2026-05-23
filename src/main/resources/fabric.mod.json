@@ -1,17 +1,19 @@
 {
   "schemaVersion": 1,
   "id": "${id}",
-  "version": "0.2.0.itisyan.patch4",
-  "name": "HTSL Reborn (Patched)",
-  "description": "Fabric mod that makes programming in Hypixel Housing easier.\n\nChanges in this patch:\nhttps://github.com/Itisyan/HTSLReborn",
+  "version": "0.2.0.itisyan.patch5",
+  "name": "HTSL Reborn Patched (v5)",
+  "description": "Fabric mod that makes programming in Hypixel Housing easier.\n\nThis is an unofficial patched build of HTSL Reborn, based on the original project by redstone-llc.",
   "authors": [
     "Wekend",
-    "Sin_ender"
+    "Sin_ender",
+	"",
+	"Itisyan (patch fork)"
   ],
   "contact": {
     "homepage": "https://redstone.llc/",
-    "sources": "https://github.com/redstone-llc/${id}",
-    "issues": "https://github.com/redstone-llc/${id}/issues"
+    "sources": "https://github.com/Itisyan/HTSLReborn",
+    "issues": "https://github.com/Itisyan/HTSLReborn/issues"
   },
   "license": "LGPL-3.0",
   "icon": "assets/htslreborn/icon.png",

@@ -19,3 +19,7 @@ Itisyan Patch4:
 - Export: Group/team/region conditions now prefer hasGroup/hasTeam/inRegion while still accepting inGroup/inTeam/hasRegion aliases on import.
 - Import: Temporarily raises menu timeouts during imports and restores them afterward.
 - Import: Added recovery for transient Action Settings/Settings timeouts after paginated choices such as function, menu, layout, team, group, and region selectors.
+
+Itisyan Patch5:
+- Import: Fixed dynamic variable placeholders with fallback values, such as `%var.player/example 0.0%`, being imported as quoted text instead of dynamic values. Legacy `%...%D` placeholders remain supported and are normalized automatically.
+- Import: Fixed fishing environment conditions not importing correctly by cycling the setting directly instead of treating it as a regular selectable option.

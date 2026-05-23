@@ -84,9 +84,11 @@ object ConditionParser {
     }
 
     private fun parseStatValue(token: TokenWithPosition): StatValue {
+        val dynamicPlaceholderMatch = Regex("""(%[\w./ ]+%)D?""", RegexOption.IGNORE_CASE).matchEntire(token.string)
+
         return when (token.tokenType) {
-            Tokens.STRING -> if (token.string.contains("%")) {
-                StatValue.UnquotedStr(token.string)
+            Tokens.STRING -> if (!token.quoted || dynamicPlaceholderMatch != null) {
+                StatValue.UnquotedStr(dynamicPlaceholderMatch?.groupValues?.get(1) ?: token.string)
             } else {
                 StatValue.Str(token.string)
             }
